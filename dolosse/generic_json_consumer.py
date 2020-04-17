@@ -1,127 +1,124 @@
-import kafka
 import json
 import time
-from matplotlib import pyplot
 import sys
 import curses
+from matplotlib import pyplot
+import kafka
 
 
 
-def PopulateVariablesFromDict(CurrentVariableList, DictToDecode,
-                              PrependString=""):
-    for key in DictToDecode:
-        ValidValue = True
-        VariableName = PrependString+key
+def populate(variables, decode,
+             prepend=""):
+    for other_key in decode:
+        valid = True
+        name = prepend+other_key
         try:
-            NextValue = float(DictToDecode[key])
+            following = float(decode[other_key])
         except (ValueError, TypeError):
-            ValidValue = False
-        if (isinstance(DictToDecode[key], dict)):
-            PopulateVariablesFromDict(CurrentVariableList, DictToDecode[key],
-                                      VariableName+": ")
+            valid = False
+        if isinstance(decode[other_key], dict):
+            populate(variables,
+                     decode[other_key],
+                     name+": ")
         else:
-            if (VariableName in CurrentVariableList):
-                if (ValidValue):
-                    CurrentVariableList[VariableName].append(NextValue)
+            if name in variables:
+                if valid:
+                    variables[name].append(following)
                 else:
-                    CurrentVariableList[VariableName].append(
-                        CurrentVariableList[VariableName][-1])
+                    variables[name].append(
+                        variables[name][-1])
             else:
-                CurrentVariableList[VariableName] = [0]*(len(XData)-1)
-                if (ValidValue):
-                    CurrentVariableList[VariableName].append(NextValue)
+                variables[name] = [0]*(len(x_axis_data)-1)
+                if valid:
+                    variables[name].append(following)
                 else:
-                    CurrentVariableList[VariableName].append(0)
+                    variables[name].append(0)
                     #Remember, the list might still be empty here
 
 
 
 
-TopicName = "default"
+topic = "default"
 
-Screen = curses.initscr()
+screen = curses.initscr()
 curses.cbreak()
-Screen.nodelay(True)
+screen.nodelay(True)
 
-if (len(sys.argv))<2:
-    print ("Please provide a topic name on the command line!")
-    print ("Using default topic name 'default'...")
+if (len(sys.argv)) < 2:
+    print("Please provide a topic name on the command line!")
+    print("Using default topic name 'default'...")
 else:
-    TopicName = sys.argv[1]
+    topic = sys.argv[1]
 
-CurrentData = {}
-LineData = {}
-Plots = {}
-Figures = {}
-DataLines = {}
-XData = []
-Count = 0
+data = {}
+line = {}
+plots = {}
+figures = {}
+axes = {}
+x_axis_data = []
+count = 0
 pyplot.ion() #Interactive mode on
 #pyplot.plot([1, 2, 3, 4], [4, 1, 3, 2])
 # To consume latest messages and auto-commit offsets
-consumer = kafka.KafkaConsumer(TopicName,
+consumer = kafka.KafkaConsumer(topic,
                                group_id='my-group',
                                bootstrap_servers=['localhost:9092'],
                                auto_offset_reset='earliest',
                                enable_auto_commit=False)
-TestPartition = kafka.TopicPartition(TopicName, 0)
+partition = kafka.TopicPartition(topic, 0)
 
 exit_char = curses.ERR
 
 for message in consumer:
     try:
         NewData = json.loads(message.value)
-    except json.decoder.JSONDecodeError as Problem:
-        print ("Error: Flawed JSON in value read from kafka topic: ",
-               message.value)
-        print ("Error message: ", Problem)
+    except json.decoder.JSONDecodeError as problem:
+        print("Error: Flawed JSON in value read from kafka topic: ",
+              message.value)
+        print("Error message: ", problem)
         NewData = ""
-    CurrentData.update(NewData)
-    print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                          message.offset, message.key,
-                                          CurrentData))
-    XData.append(Count)
-    Count+=1
+    data.update(NewData)
+    print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
+                                         message.offset, message.key,
+                                         data))
+    x_axis_data.append(count)
+    count += 1
 
-    PopulateVariablesFromDict(LineData, CurrentData)
+    populate(line, data)
 
-    for key in LineData:
-        while (len(LineData[key]) < len(XData)):
-            LineData[key].append(0); #Variable went missing from CurrentData.
+    for key in line:
+        while len(line[key]) < len(x_axis_data):
+            line[key].append(0) #Variable went missing from data.
             #Buffer with zeroes for now.
-        print (key, LineData[key]);
-        if (key in Plots):
-            DataLines[key][0].set_ydata(LineData[key])
-            DataLines[key][0].set_xdata(XData)
-            Plots[key].relim()
-            Plots[key].autoscale_view()
-            Figures[key].canvas.draw()
-            Figures[key].canvas.flush_events()
+        print(key, line[key])
+        if key in plots:
+            axes[key][0].set_ydata(line[key])
+            axes[key][0].set_xdata(x_axis_data)
+            plots[key].relim()
+            plots[key].autoscale_view()
+            figures[key].canvas.draw()
+            figures[key].canvas.flush_events()
         else:
-            Figures[key], Plots[key] = pyplot.subplots()
-            DataLines[key] = Plots[key].plot(LineData[key])
-            Plots[key].set_autoscaley_on(True)
-            Plots[key].set_autoscalex_on(True)
-            Plots[key].set_title(key)
-    while (consumer.end_offsets([TestPartition])[TestPartition]
-           == consumer.position(kafka.TopicPartition(TopicName, 0))):
-        for key in LineData:
-            Figures[key].canvas.draw()
-            Figures[key].canvas.flush_events()
+            figures[key], plots[key] = pyplot.subplots()
+            axes[key] = plots[key].plot(line[key])
+            plots[key].set_autoscaley_on(True)
+            plots[key].set_autoscalex_on(True)
+            plots[key].set_title(key)
+    while (consumer.end_offsets([partition])[partition]
+           == consumer.position(kafka.TopicPartition(topic, 0))):
+        for key in line:
+            figures[key].canvas.draw()
+            figures[key].canvas.flush_events()
         time.sleep(0.2)
-        exit_char = Screen.getch()
-        if (exit_char != curses.ERR):
+        exit_char = screen.getch()
+        if exit_char != curses.ERR:
             break
-    if (exit_char != curses.ERR):
+    if exit_char != curses.ERR:
         break
     else:
-        exit_char = Screen.getch()
+        exit_char = screen.getch()
 
 
 
 curses.nocbreak()
 curses.endwin()
-#    pyplot.show()
-
-                
-
