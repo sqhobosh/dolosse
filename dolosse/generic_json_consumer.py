@@ -86,7 +86,7 @@ def main():
     pyplot.ion() #Interactive mode on
     # To consume latest messages and auto-commit offsets
     consumer = create()
-    exit_char = ERR
+    keyboard_input = ERR
 
     for message in consumer:
         try:
@@ -124,12 +124,12 @@ def main():
             for key in line:
                 redraw(figures, key)
             sleep(0.2)
-            exit_char = screen.getch()
-            if exit_char != ERR:
+            keyboard_input = screen.getch()
+            if keyboard_input != ERR:
                 break
-        if exit_char != ERR:
+        if keyboard_input != ERR:
             break
-        exit_char = screen.getch()
+        keyboard_input = screen.getch()
 
     nocbreak()
     endwin()
