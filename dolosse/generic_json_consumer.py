@@ -71,6 +71,10 @@ def main():
     screen = initscr()
     cbreak()
     screen.nodelay(True)
+    screen.getch()
+
+    print("Generic Graphing Consumer")
+    print("Press any key to exit...")
 
     data = {}
     line = {}
@@ -93,9 +97,6 @@ def main():
             print("Error message: ", problem)
             update = ""
         data.update(update)
-        print("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                             message.offset, message.key,
-                                             data))
         x_axis_data.append(count)
         count += 1
 
@@ -105,7 +106,6 @@ def main():
             while len(line[key]) < len(x_axis_data):
                 line[key].append(0) #Variable went missing from data.
                 #Buffer with zeroes for now.
-            print(key, line[key])
             if key in plots:
                 axes[key][0].set_ydata(line[key])
                 axes[key][0].set_xdata(x_axis_data)
