@@ -1,10 +1,12 @@
 """Reads json data from a kafka topic and graphs it"""
-import json
-import time
-import sys
-import curses
+
+from json import loads, decoder
+from time import sleep
+from sys import argv
+
+from curses import initscr, cbreak, ERR, nocbreak, endwin
 from matplotlib import pyplot
-import kafka
+from kafka import KafkaConsumer, TopicPartition
 
 
 def populate(variables, decode,
@@ -38,17 +40,14 @@ def populate(variables, decode,
                     #Remember, the list might still be empty here
 
 
-
-
-
 def check():
     """Checks that the right number of args are present"""
     topic = "default"
-    if (len(sys.argv)) < 2:
+    if (len(argv)) < 2:
         print("Please provide a topic name on the command line!")
         print("Using default topic name 'default'...")
     else:
-        topic = sys.argv[1]
+        topic = argv[1]
     return topic
 
 
@@ -58,14 +57,11 @@ def redraw(figures, key):
     figures[key].canvas.flush_events()
 
 
-
-
-
 def main():
     """Main function - reads json data from a kafka topic and graphs it"""
 
-    screen = curses.initscr()
-    curses.cbreak()
+    screen = initscr()
+    cbreak()
     screen.nodelay(True)
 
     topic = check()
@@ -79,18 +75,18 @@ def main():
     count = 0
     pyplot.ion() #Interactive mode on
     # To consume latest messages and auto-commit offsets
-    consumer = kafka.KafkaConsumer(topic,
-                                   group_id='my-group',
-                                   bootstrap_servers=['localhost:9092'],
-                                   auto_offset_reset='earliest',
-                                   enable_auto_commit=False)
+    consumer = KafkaConsumer(topic,
+                             group_id='my-group',
+                             bootstrap_servers=['localhost:9092'],
+                             auto_offset_reset='earliest',
+                             enable_auto_commit=False)
 
-    exit_char = curses.ERR
+    exit_char = ERR
 
     for message in consumer:
         try:
-            update = json.loads(message.value)
-        except json.decoder.JSONDecodeError as problem:
+            update = loads(message.value)
+        except decoder.JSONDecodeError as problem:
             print("Error: Flawed JSON in value read from kafka topic: ",
                   message.value)
             print("Error message: ", problem)
@@ -121,22 +117,22 @@ def main():
                 plots[key].set_autoscaley_on(True)
                 plots[key].set_autoscalex_on(True)
                 plots[key].set_title(key)
-        while (consumer.end_offsets([kafka.TopicPartition(topic, 0)])
-               [kafka.TopicPartition(topic, 0)]
-               == consumer.position(kafka.TopicPartition(topic, 0))):
+        while (consumer.end_offsets([TopicPartition(topic, 0)])
+               [TopicPartition(topic, 0)]
+               == consumer.position(TopicPartition(topic, 0))):
             for key in line:
                 redraw(figures, key)
-            time.sleep(0.2)
+            sleep(0.2)
             exit_char = screen.getch()
-            if exit_char != curses.ERR:
+            if exit_char != ERR:
                 break
-        if exit_char != curses.ERR:
+        if exit_char != ERR:
             break
         exit_char = screen.getch()
 
+    nocbreak()
+    endwin()
 
 
-    curses.nocbreak()
-    curses.endwin()
-
-main()
+if __name__ == '__main__':
+    main()
