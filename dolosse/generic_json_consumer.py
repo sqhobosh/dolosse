@@ -1,7 +1,7 @@
 """Reads json data from a kafka topic and graphs it"""
 
+from argparse import ArgumentParser
 from json import loads, decoder
-from sys import argv
 from time import sleep
 
 from curses import initscr, cbreak, ERR, nocbreak, endwin
@@ -40,16 +40,24 @@ def populate(variables, decode,
                     #Remember, the list might still be empty here
 
 
-def check():
-    """Checks that the right number of args are present"""
-    topic = "default"
-    if (len(argv)) < 2:
-        print("Please provide a topic name on the command line!")
-        print("Using default topic name 'default'...")
-    else:
-        topic = argv[1]
-    return topic
+def create():
+    """Creates and returns a kafka consumer"""
+    parser = ArgumentParser()
+    parser.add_argument("--topic", default="default",
+                        help="The name of the kafka topic from which to read")
+    parser.add_argument("--group", default="my-group",
+                        help="The kafka group in which the topic exists")
+    parser.add_argument("--server", default="localhost:9092",
+                        help="Name and port of the kafka server (e.g. localhost:9092)")
+    arguments = parser.parse_args()
 
+    # To consume latest messages and auto-commit offsets
+    consumer = KafkaConsumer(arguments.topic,
+                             group_id=arguments.group,
+                             bootstrap_servers=[arguments.server],
+                             auto_offset_reset='earliest',
+                             enable_auto_commit=False)
+    return consumer
 
 def redraw(figures, key):
     """Redraw the given figure from a dict of figures"""
@@ -64,8 +72,6 @@ def main():
     cbreak()
     screen.nodelay(True)
 
-    topic = check()
-
     data = {}
     line = {}
     plots = {}
@@ -75,12 +81,7 @@ def main():
     count = 0
     pyplot.ion() #Interactive mode on
     # To consume latest messages and auto-commit offsets
-    consumer = KafkaConsumer(topic,
-                             group_id='my-group',
-                             bootstrap_servers=['localhost:9092'],
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=False)
-
+    consumer = create()
     exit_char = ERR
 
     for message in consumer:
@@ -117,9 +118,9 @@ def main():
                 plots[key].set_autoscaley_on(True)
                 plots[key].set_autoscalex_on(True)
                 plots[key].set_title(key)
-        while (consumer.end_offsets([TopicPartition(topic, 0)])
-               [TopicPartition(topic, 0)]
-               == consumer.position(TopicPartition(topic, 0))):
+        while (consumer.end_offsets([TopicPartition(message.topic, 0)])
+               [TopicPartition(message.topic, 0)]
+               == consumer.position(TopicPartition(message.topic, 0))):
             for key in line:
                 redraw(figures, key)
             sleep(0.2)
