@@ -1,12 +1,12 @@
 """Reads json data from a kafka topic and graphs it"""
 
 from json import loads, decoder
-from time import sleep
 from sys import argv
+from time import sleep
 
 from curses import initscr, cbreak, ERR, nocbreak, endwin
-from matplotlib import pyplot
 from kafka import KafkaConsumer, TopicPartition
+from matplotlib import pyplot
 
 
 def populate(variables, decode,
