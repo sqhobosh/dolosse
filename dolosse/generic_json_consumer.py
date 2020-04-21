@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from curses import initscr, cbreak, ERR, nocbreak, endwin
 from json import loads, decoder
 
-from confluent_kafka import Consumer, TopicPartition, OFFSET_BEGINNING
+from confluent_kafka import Consumer
 from matplotlib import pyplot
 
 
