@@ -1,11 +1,10 @@
 """Reads json data from a kafka topic and graphs it"""
 
 from argparse import ArgumentParser
-from json import loads, decoder
-from time import sleep
-
 from curses import initscr, cbreak, ERR, nocbreak, endwin
-from kafka import KafkaConsumer, TopicPartition
+from json import loads, decoder
+
+from confluent_kafka import Consumer, TopicPartition, OFFSET_BEGINNING
 from matplotlib import pyplot
 
 
@@ -74,7 +73,7 @@ def update_data(data, value):
 
 
 def graph(topic, group, server):
-    """Reads json data from a kafka topic and graphs it"""
+    """Main function - reads json data from a kafka topic and graphs it"""
 
     screen = initscr()
     cbreak()
@@ -91,48 +90,48 @@ def graph(topic, group, server):
     axes = {}
     count = 0
     pyplot.ion() #Interactive mode on
-    # To consume latest messages and auto-commit offsets
-    consumer = KafkaConsumer(topic,
-                             group_id=group,
-                             bootstrap_servers=[server],
-                             auto_offset_reset='earliest',
-                             enable_auto_commit=False)
+    configuration = {"bootstrap.servers": server,
+                     "group.id": group,
+                     "default.topic.config" : {
+                         "auto.offset.reset": "earliest"},
+                     "enable.auto.commit": False}
+    consumer = Consumer(configuration)
+    consumer.subscribe([topic])
     keyboard_input = ERR
 
-    for message in consumer:
-        update_data(data, message.value)
-        count += 1
-
-        populate(line, data, count)
-
-        for key in line:
-            while len(line[key]) < count:
-                line[key].append(0) #Variable went missing from data.
-                #Buffer with zeroes for now.
-            if key in plots:
-                axes[key][0].set_ydata(line[key])
-                axes[key][0].set_xdata(list(range(count)))
-                plots[key].relim()
-                plots[key].autoscale_view()
-            else:
-                figures[key], plots[key] = pyplot.subplots()
-                axes[key] = plots[key].plot(line[key])
-                plots[key].set_autoscaley_on(True)
-                plots[key].set_autoscalex_on(True)
-                plots[key].set_title(key)
-
-        redraw(figures)
-        while (consumer.end_offsets([TopicPartition(topic, 0)])
-               [TopicPartition(topic, 0)]
-               == consumer.position(TopicPartition(topic, 0))):
-            redraw(figures)
-            sleep(0.2)
-            keyboard_input = screen.getch()
-            if keyboard_input != ERR:
-                break
+    while True:
         if keyboard_input != ERR:
             break
         keyboard_input = screen.getch()
+        message = consumer.consume(num_messages=1, timeout=0.2)
+        if (message is None) or (message == []):
+            redraw(figures)
+        elif message[0].error():
+            print("Something went wrong with the read!")
+            print(message.error())
+        else:
+            update_data(data, message[0].value())
+            count += 1
+
+            populate(line, data, count)
+
+            for key in line:
+                while len(line[key]) < count:
+                    line[key].append(0) #Variable went missing from data.
+                    #Buffer with zeroes for now.
+                if key in plots:
+                    axes[key][0].set_ydata(line[key])
+                    axes[key][0].set_xdata(list(range(count)))
+                    plots[key].relim()
+                    plots[key].autoscale_view()
+                else:
+                    figures[key], plots[key] = pyplot.subplots()
+                    axes[key] = plots[key].plot(line[key])
+                    plots[key].set_autoscaley_on(True)
+                    plots[key].set_autoscalex_on(True)
+                    plots[key].set_title(key)
+
+            redraw(figures)
 
     nocbreak()
     endwin()
