@@ -18,6 +18,12 @@ def populate(variables, decode,
             following = float(decode[other_key])
         except (ValueError, TypeError):
             valid = False
+        if not valid:
+            try:
+                following = int(decode[other_key], 16) #Catch hexadecimals
+                valid = True
+            except (ValueError, TypeError):
+                valid = False
         if isinstance(decode[other_key], dict):
             populate(variables,
                      decode[other_key],
