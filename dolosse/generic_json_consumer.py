@@ -23,8 +23,8 @@ def populate(variables, decode, count, prepend=""):
                  from anywhere outside this function. If that is somehow impossible,
                  then use the same value every time.
 
-        Return value: No direct return; this function rather populates the 'variables' dict
-                      by appending new data from the 'decode' dict.
+    Return value: No direct return; this function rather populates the 'variables' dict
+                  by appending new data from the 'decode' dict.
     """
     for other_key in decode.keys():
         valid = True
@@ -66,7 +66,8 @@ def get_args():
     Return value: A dict containing the topic name, group name, and server name
                   suitable for passing as a parameter to the graph function.
     """
-    parser = ArgumentParser(description="A generic consumer that graphs any JSON data that it consumes")
+    parser = ArgumentParser(description=
+                            "A generic consumer that graphs any JSON data that it consumes")
     parser.add_argument("--topic", default="default",
                         help="The name of the kafka topic from which to read")
     parser.add_argument("--group", default="my-group",
@@ -185,10 +186,5 @@ def graph(arguments):
     endwin()
 
 
-def main_args():
-    """Grabs parameters from the arguments"""
-    graph(get_args())
-
-
 if __name__ == '__main__':
-    main_args()
+    graph(get_args())
