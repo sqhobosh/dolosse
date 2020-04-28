@@ -134,7 +134,7 @@ def graph(arguments):
     print("Press any key to exit...")
 
     data = {}
-    line = {}
+    curve = {}
     plots = {}
     figures = {}
     axes = {}
@@ -162,20 +162,20 @@ def graph(arguments):
             update_data(data, message[0].value())
             count += 1
 
-            populate(line, data, count)
+            populate(curve, data, count)
 
-            for key in line.keys():
-                while len(line[key]) < count:
-                    line[key].append(0)  # Variable went missing from data.
+            for key in curve.keys():
+                while len(curve[key]) < count:
+                    curve[key].append(0)  # Variable went missing from data.
                     # Buffer with zeroes for now.
                 if key in plots.keys():
-                    axes[key][0].set_ydata(line[key])
+                    axes[key][0].set_ydata(curve[key])
                     axes[key][0].set_xdata(list(range(count)))
                     plots[key].relim()
                     plots[key].autoscale_view()
                 else:
                     figures[key], plots[key] = pyplot.subplots()
-                    axes[key] = plots[key].plot(line[key])
+                    axes[key] = plots[key].plot(curve[key])
                     plots[key].set_autoscaley_on(True)
                     plots[key].set_autoscalex_on(True)
                     plots[key].set_title(key)
