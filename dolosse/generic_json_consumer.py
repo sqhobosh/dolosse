@@ -79,7 +79,7 @@ def get_args():
     return parser.parse_args()
 
 
-def redraw(figures):
+def redraw(graphs):
     """Redraw all figures from a dict of figures. Call often.
 
     Parameters:
@@ -87,9 +87,9 @@ def redraw(figures):
 
     Return value: None. Merely redraws the figures in the list.
     """
-    for key in figures.keys():
-        figures[key].canvas.draw()
-        figures[key].canvas.flush_events()
+    for key in graphs.keys():
+        graphs[key]["figure"].canvas.draw()
+        graphs[key]["figure"].canvas.flush_events()
 
 
 def update_data(data, value):
@@ -135,9 +135,7 @@ def graph(arguments):
 
     data = {}
     curve = {}
-    plots = {}
-    figures = {}
-    axes = {}
+    graphs = {}
     count = 0
     pyplot.ion()  # Interactive mode on
     consumer = Consumer({"bootstrap.servers": arguments.server,
@@ -154,7 +152,7 @@ def graph(arguments):
         keyboard_input = screen.getch()
         message = consumer.consume(num_messages=1, timeout=0.2)
         if (message is None) or (message == []):
-            redraw(figures)
+            redraw(graphs)
         elif message[0].error():
             print("Something went wrong with the read!")
             print(message.error())
@@ -168,19 +166,20 @@ def graph(arguments):
                 while len(curve[key]) < count:
                     curve[key].append(0)  # Variable went missing from data.
                     # Buffer with zeroes for now.
-                if key in plots.keys():
-                    axes[key][0].set_ydata(curve[key])
-                    axes[key][0].set_xdata(list(range(count)))
-                    plots[key].relim()
-                    plots[key].autoscale_view()
+                if key in graphs.keys():
+                    graphs[key]["axis"][0].set_ydata(curve[key])
+                    graphs[key]["axis"][0].set_xdata(list(range(count)))
+                    graphs[key]["plot"].relim()
+                    graphs[key]["plot"].autoscale_view()
                 else:
-                    figures[key], plots[key] = pyplot.subplots()
-                    axes[key] = plots[key].plot(curve[key])
-                    plots[key].set_autoscaley_on(True)
-                    plots[key].set_autoscalex_on(True)
-                    plots[key].set_title(key)
+                    graphs[key] = {}
+                    graphs[key]["figure"], graphs[key]["plot"] = pyplot.subplots()
+                    graphs[key]["axis"] = graphs[key]["plot"].plot(curve[key])
+                    graphs[key]["plot"].set_autoscaley_on(True)
+                    graphs[key]["plot"].set_autoscalex_on(True)
+                    graphs[key]["plot"].set_title(key)
 
-            redraw(figures)
+            redraw(graphs)
 
     nocbreak()
     endwin()
