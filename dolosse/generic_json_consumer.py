@@ -1,7 +1,8 @@
 """Reads json data from a kafka topic and graphs it"""
 
 from argparse import ArgumentParser
-from curses import initscr, cbreak, ERR, nocbreak, endwin
+from curses import initscr, cbreak, nocbreak, endwin
+from curses import ERR as NoInput
 from json import loads, decoder
 
 from confluent_kafka import Consumer
@@ -144,10 +145,10 @@ def graph(arguments):
                              "auto.offset.reset": "earliest"},
                          "enable.auto.commit": False})
     consumer.subscribe([arguments.topic])
-    keyboard_input = ERR
+    keyboard_input = NoInput
 
     while True:
-        if keyboard_input != ERR:
+        if keyboard_input != NoInput:
             break
         keyboard_input = screen.getch()
         message = consumer.consume(num_messages=1, timeout=0.2)
